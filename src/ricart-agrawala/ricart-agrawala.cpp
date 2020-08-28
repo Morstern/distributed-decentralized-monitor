@@ -1,122 +1,200 @@
 #include "ricart-agrawala.h"
 
-void RicartAgrawala::sendMessage(Message message, int _port){
-    // TODO: Implement send message in ZMQ
-    // Utils::outputMessageInformation(message,_port);
+void *RicartAgrawala::createZmqSocket(int type) {
+  void *newSocket = zmq_socket(context, type);
+  return newSocket;
+}
+void RicartAgrawala::closeZmqSocket(void *socket) { zmq_close(socket); }
+
+void RicartAgrawala::sendMessage(Message message, int _port) {
+  void *socket = createZmqSocket(ZMQ_REQ);
+  std::string host = HOST_ADDRESS + std::to_string(_port);
+  std::cout << "Sending message to: " + host << message << std::endl;
+  if (zmq_connect(socket, host.c_str()) == 0) {
+    std::string serializedMessage = message.serializeMessage();
+    zmq_send(socket, serializedMessage.c_str(), serializedMessage.size(), 0);
+  } else {
+    std::cout << zmq_strerror(zmq_errno()) << std::endl;
+  }
+  zmq_close(socket);
 }
 
-
-void RicartAgrawala::sendReplyMessages(){
-    for (int i=0; i<requestQueue.size(); i++){
-        if(requestQueue[i].second.getPort()!=port){
-            Message message = requestQueue[i].second;
-            Message replyMessage = Message{message,port};
-            sendMessage(replyMessage, message.getPort());
-            removeFirstElementFromRequestQueue();
-        }
-        else{
-            break;
-        }
+void RicartAgrawala::sendReplyMessages() {
+  std::vector<std::string> requestedMemoryAddresses{};
+  for (int i = 0; i < requestQueue.size(); i++) {
+    if (requestQueue.at(i).second.getPort() == port) {
+      requestedMemoryAddresses.push_back(
+          requestQueue.at(i).second.getMemoryAddress());
+      continue;
+    } else if (std::count(requestedMemoryAddresses.begin(),
+                          requestedMemoryAddresses.end(),
+                          requestQueue.at(i).second.getMemoryAddress()) == 0) {
+      Message message = requestQueue.at(i).second;
+      Message replyMessage = Message{message, port};
+      sendMessage(replyMessage, message.getPort());
+      removeMessageFromQueue(message);
     }
+  }
 }
 
 void RicartAgrawala::sendReplyMessage(Message message) {
-        Message replyMessage = Message {message,message.getPort()};
-        sendMessage(replyMessage,replyMessage.getPort());
+  Message replyMessage = Message{message, port};
+  sendMessage(replyMessage, message.getPort());
 }
 
-std::string RicartAgrawala::getFirstRequestIDInRequestQueue(){
-    return requestQueue.at(0).second.getRequestId();
+std::string
+RicartAgrawala::getRequestIdWithMemoryAddress(std::string memoryAddress) {
+
+  for (int i = 0; i < requestQueue.size(); i++) {
+    if (requestQueue.at(i).second.getMemoryAddress() == memoryAddress) {
+      return requestQueue.at(i).second.getRequestId();
+    }
+  }
+  return "";
 }
 
-bool RicartAgrawala::checkIfReceivedAllReplies(){
-    return replyReceived[getFirstRequestIDInRequestQueue()].size()==portNumbers.size();
+bool RicartAgrawala::checkIfReceivedAllReplies(std::string memoryAddress) {
+  return replyReceived[getRequestIdWithMemoryAddress(memoryAddress)].size() ==
+         portNumbers.size();
 }
 
-void RicartAgrawala::removeFirstElementFromRequestQueue(){
-    requestQueue.erase(requestQueue.begin());
+Message RicartAgrawala::removeFirstElementFromRequestQueue() {
+  Message message = requestQueue.at(0).second;
+  requestQueue.erase(requestQueue.begin());
+  return message;
+}
+
+Message
+RicartAgrawala::removeMessageWithMessageAddress(std::string memoryAddress) {
+  Message message{"", (long)-1, -1, "", MessageType::REMOVE};
+  for (int i = 0; i < requestQueue.size(); i++) {
+    if (requestQueue.at(i).second.getPort() == port &&
+        requestQueue.at(i).second.getMemoryAddress() == memoryAddress) {
+      Message message2 = requestQueue.at(i).second;
+      requestQueue.erase(requestQueue.begin() + i);
+      return message2;
+    }
+  }
+  sendReplyMessages();
+  return message;
 }
 
 void RicartAgrawala::sortRequestQueue() {
-    std::sort(requestQueue.begin(), requestQueue.end(), [](const std::pair<long,Message>& x, std::pair<long,Message>& y){
-        return x.first < y.first;
-    });
+  std::sort(requestQueue.begin(), requestQueue.end(),
+            [](const std::pair<long, Message> &x, std::pair<long, Message> &y) {
+              return x.first < y.first;
+            });
+}
+
+void RicartAgrawala::removeMessageFromQueue(Message message) {
+  for (int i = 0; i < requestQueue.size(); i++) {
+    if (message.getRequestId() == requestQueue.at(i).second.getRequestId()) {
+      requestQueue.erase(requestQueue.begin() + i);
+      break;
+    }
+  }
 }
 
 RicartAgrawala::RicartAgrawala(int port) : port{port} {
-    requestId = 0;
+  context = zmq_ctx_new();
+  requestId = 0;
 }
 
-void RicartAgrawala::sendRequestMessage(std::string filename){
-    long timestamp = Utils::getCurrentTimestamp();
-    std::string s_requestId = Utils::createRequestId(port, requestId);
-    Message message {s_requestId, timestamp, port, filename, MessageType::REQUEST};
-    addToRequestQueue(message);
-    for (int i=0; i<portNumbers.size();i++){
-        sendMessage(message,portNumbers[i]);
-    }
-    requestId++;
+RicartAgrawala::~RicartAgrawala() { zmq_ctx_destroy(context); }
+
+Message RicartAgrawala::sendRequestMessage(std::string address) {
+  long timestamp = Utils::getCurrentTimestamp();
+  std::string s_requestId = Utils::createRequestId(port, requestId);
+  Message message{s_requestId, timestamp, port, address, MessageType::REQUEST};
+  addToRequestQueue(message);
+  for (int i = 0; i < portNumbers.size(); i++) {
+    sendMessage(message, portNumbers.at(i));
+  }
+  requestId++;
+  return message;
+}
+
+void RicartAgrawala::sendRemoveMessage(Message message) {
+  message.setMessageType(MessageType::REMOVE);
+  for (int i = 0; i < portNumbers.size(); i++) {
+    sendMessage(message, portNumbers.at(i));
+  }
 }
 
 void RicartAgrawala::receiveRequestMessage(Message message) {
-    // Utils::outputMessageInformation(message,message.getPort());
-    if(requestQueue.size()==0){
-        sendReplyMessage(message);
-    }else{
+  Utils::outputMessageInformation(message, message.getPort(),
+                                  HelperMessageReceiverOrSender::RECEIVER);
+  if (requestQueue.size() == 0) {
+    sendReplyMessage(message);
+  } else {
     addToRequestQueue(message);
-    }
+  }
 }
 
 void RicartAgrawala::receiveReplyMessage(Message message) {
-    // Utils::outputMessageInformation(message,port);
-    std::vector<int> replies;
-    if(replyReceived.count(message.getRequestId())){
-        replies = replyReceived[message.getRequestId()];
-        replies.push_back(message.getPort());
-        replyReceived[message.getRequestId()]=replies;
-    }else{
-        replies.push_back(message.getPort());
-        replyReceived[message.getRequestId()] = replies;   
+  Utils::outputMessageInformation(message, port,
+                                  HelperMessageReceiverOrSender::RECEIVER);
+  std::vector<int> replies;
+  if (replyReceived.count(message.getRequestId())) {
+    replies = replyReceived[message.getRequestId()];
+    replies.push_back(message.getPort());
+    replyReceived[message.getRequestId()] = replies;
+  } else {
+    replies.push_back(message.getPort());
+    replyReceived[message.getRequestId()] = replies;
+  }
+}
+
+void RicartAgrawala::receiveRemoveMessage(Message message) {
+  Utils::outputMessageInformation(message, port,
+                                  HelperMessageReceiverOrSender::RECEIVER);
+  removeMessageFromQueue(message);
+  sendReplyMessages();
+}
+
+bool RicartAgrawala::canEnterCriticalSection(std::string memoryAddress) {
+  if (requestQueue.size() > 0) {
+    if (checkIfReceivedAllReplies(memoryAddress)) {
+      return true;
+    } else {
+      return false;
     }
+  }
+  return false;
 }
 
-bool RicartAgrawala::canEnterCriticalSection() {
-    if(requestQueue.size()>0){
-        if(checkIfReceivedAllReplies()){
-            return true;
-        }else{
-            return false;
-        }
-    }
-    return false;
+void RicartAgrawala::exitCriticalSection(std::string memoryAddress) {
+  Message message = removeFirstElementFromRequestQueue();
+  // sendRemoveMessage(message);
+  sendReplyMessages();
 }
 
-void RicartAgrawala::exitCriticalSection(){
-    removeFirstElementFromRequestQueue();
-    sendReplyMessages();
+void RicartAgrawala::addNewPortNumber(int port) { portNumbers.push_back(port); }
+
+void RicartAgrawala::removePortNumber(int port) {
+  int index;
+  if (index = std::find(portNumbers.begin(), portNumbers.end(), port) !=
+              portNumbers.end()) {
+    portNumbers.erase(portNumbers.begin() + index);
+  }
 }
 
-void RicartAgrawala::addNewPortNumber(int port){
-    portNumbers.push_back(port);
+void RicartAgrawala::displayPortNumbers() { Utils::displayVector(portNumbers); }
+
+void RicartAgrawala::displayMessages() {
+  std::cout << "----" << std::endl;
+  std::cout << "Wektor requestQueue" << std::endl;
+  Utils::displayVector(requestQueue);
+  std::cout << "----" << std::endl;
 }
 
-void RicartAgrawala::removePortNumber(int port){
-    int index;
-    if(index = std::find(portNumbers.begin(),portNumbers.end(), port) != portNumbers.end()){
-        portNumbers.erase(portNumbers.begin()+index);
-    }
+void RicartAgrawala::addToRequestQueue(Message message) {
+  requestQueue.push_back(
+      std::pair<long, Message>{message.getTimestamp(), message});
+  sortRequestQueue();
+  sendReplyMessages();
 }
 
-void RicartAgrawala::displayPortNumbers(){
-    Utils::displayVector(portNumbers);
-}
+int RicartAgrawala::requestQueueSize() { return requestQueue.size(); }
 
-void RicartAgrawala::addToRequestQueue(Message message){
-    requestQueue.push_back(std::pair<long,Message> {message.getTimestamp(), message});
-    sortRequestQueue();
-    sendReplyMessages();
-}
-
-int RicartAgrawala::requestQueueSize(){
-    return requestQueue.size();
-}
+int RicartAgrawala::getPort() { return port; }

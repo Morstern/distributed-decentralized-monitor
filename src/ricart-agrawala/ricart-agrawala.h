@@ -1,46 +1,55 @@
 #ifndef RICART_AGRAWALA_H
 #define RICART_AGRAWALA_H
 
-#include <iostream>
-#include <string>
-#include <vector>
-#include <map>
-#include <zmq.h>
-#include <algorithm>
-#include <set>
+#include "../common/common.h"
 #include "../message/message.h"
 #include "../utils/utils.h"
+#include <algorithm>
+#include <iostream>
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
+#include <zmq.h>
 
 class RicartAgrawala {
-    private:
-    std::vector<int> portNumbers;
-    std::vector<std::pair<long, Message>> requestQueue;
-    std::map<std::string, std::vector<int>> replyReceived;
-    
-    int port;
-    int requestId;
-  
-    void sendMessage(Message message, int port);
-    void sendReplyMessages();
-    void sendReplyMessage(Message message);
-    std::string getFirstRequestIDInRequestQueue();
-    bool checkIfReceivedAllReplies();
-    void removeFirstElementFromRequestQueue();
-    void sortRequestQueue();
-    
-    public:
-     RicartAgrawala(int port);
-     void sendRequestMessage(std::string filename);
-     void addToRequestQueue(Message message);
-     void receiveRequestMessage(Message message);
-     void receiveReplyMessage(Message message);
-     bool canEnterCriticalSection();
-     void exitCriticalSection();
-     void addNewPortNumber(int port);
-     void removePortNumber(int port);
-     void displayPortNumbers();
-     int requestQueueSize();
+private:
+  std::vector<int> portNumbers;
+  std::vector<std::pair<long, Message>> requestQueue;
+  std::map<std::string, std::vector<int>> replyReceived;
 
+  void *context;
+  int port;
+  int requestId;
 
+  void *createZmqSocket(int type);
+  void closeZmqSocket(void *socket);
+  void sendMessage(Message message, int port);
+  void sendReplyMessage(Message message);
+  std::string getRequestIdWithMemoryAddress(std::string memoryAddress);
+  bool checkIfReceivedAllReplies(std::string memoryAddress);
+  Message removeFirstElementFromRequestQueue();
+  void removeMessageFromQueue(Message message);
+  void sortRequestQueue();
+
+public:
+  RicartAgrawala(int port);
+  ~RicartAgrawala();
+  void sendReplyMessages();
+  Message sendRequestMessage(std::string address);
+  void sendRemoveMessage(Message message);
+  void addToRequestQueue(Message message);
+  void receiveRequestMessage(Message message);
+  void receiveReplyMessage(Message message);
+  void receiveRemoveMessage(Message message);
+  Message removeMessageWithMessageAddress(std::string memoryAddress);
+  bool canEnterCriticalSection(std::string memoryAddress);
+  void exitCriticalSection(std::string memoryAddress);
+  void addNewPortNumber(int port);
+  void removePortNumber(int port);
+  void displayPortNumbers();
+  void displayMessages();
+  int requestQueueSize();
+  int getPort();
 };
 #endif
