@@ -24,7 +24,6 @@ public:
   ~Monitor();
   void enter(std::string memoryAddress);
   void tryEnter(std::string memoryAddress, int ms);
-  void pulseAll(std::string memoryAddress);
   void wait(std::string memoryAddress);
   void exit(std::string memoryAddress);
   bool isEntered(std::string memoryAddress);

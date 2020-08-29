@@ -5,7 +5,11 @@
 
 // HOW TO RUN:
 // ./a.out test -> run tests
-// ./a.out monitor MODE OWN_PORT OTHER_PORT_1 OTHER_PORT_2 OTHER_PORT_3...
+// ./a.out monitor MODE{1,2,3} OWN_PORT OTHER_PORT_1 OTHER_PORT_2 OTHER_PORT_3...
+// for example: 4 console windows: [console_1] ./a.out monitor 1
+// 10000 10001 10002 10003 [console_2] ./a.out monitor 2 10001 10000 10002 10003
+// [console_3] ./a.out monitor 3 10002 10000 10001 10003
+// [console_4] ./a.out monitor 1 10003 10001 10002 10000
 
 const std::string TEST = "test";
 const std::string MONITOR = "monitor";
@@ -39,52 +43,58 @@ int main(int argc, char **argv) {
     switch (std::stoi(argv[2])) {
     case 1: {
       std::cout << "CASE 1" << std::endl;
-      monitor.enter("TEST_1");
-      std::cout << "Czy monitor ma dostep do [TEST_1]: "
-                << monitor.isEntered("TEST_1") << std::endl;
+      monitor.enter("TEST_A");
+      std::cout << "Czy monitor ma dostep do [TEST_A]: "
+                << monitor.isEntered("TEST_A") << std::endl;
 
-      monitor.exit("TEST_1");
-      std::cout << "KONIEC" << std::endl;
+      monitor.exit("TEST_A");
       while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::cout << "KONIEC" << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       }
       break;
     }
+
     case 2: {
       std::cout << "CASE 2" << std::endl;
-      monitor.enter("TEST_1");
+      monitor.enter("TEST_A");
+      monitor.wait("TEST_A");
+      monitor.enter("TEST_B");
+      std::cout << "Czy monitor ma dostep do [TEST_A]: "
+                << monitor.isEntered("TEST_A") << std::endl;
+      std::cout << "Czy monitor ma dostep do [TEST_B]: "
+                << monitor.isEntered("TEST_B") << std::endl;
+      monitor.exit("TEST_A");
+      monitor.exit("TEST_B");
       while (true) {
-        monitor.tryEnter("TEST_2", 2000);
-        if (!monitor.isEntered("TEST_2")) {
-          monitor.exit("TEST_1");
-          monitor.enter("TEST_1");
+        std::cout << "KONIEC" << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      }
+      break;
+    }
+
+    case 3: {
+      std::cout << "CASE 3" << std::endl;
+      while (true) {
+        monitor.enter("TEST_A");
+        monitor.tryEnter("TEST_B", 2000);
+        if (!monitor.isEntered("TEST_B")) {
+          monitor.exit("TEST_A");
         } else {
           break;
         }
       }
 
-      std::cout << "Czy monitor ma dostep do [TEST_1]: "
-                << monitor.isEntered("TEST_1") << std::endl;
-      std::cout << "Czy monitor ma dostep do [TEST_2]: "
-                << monitor.isEntered("TEST_2") << std::endl;
-      monitor.exit("TEST_1");
-      monitor.exit("TEST_2");
-      std::cout << "KONIEC" << std::endl;
+      std::cout << "Czy monitor ma dostep do [TEST_A]: "
+                << monitor.isEntered("TEST_A") << std::endl;
+      std::cout << "Czy monitor ma dostep do [TEST_B]: "
+                << monitor.isEntered("TEST_B") << std::endl;
+      monitor.exit("TEST_A");
+      monitor.exit("TEST_B");
       while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::cout << "KONIEC" << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       }
-      break;
-
-      break;
-    }
-    case 3: {
-      std::cout << "CASE 3" << std::endl;
-
-      break;
-    }
-    case 4: {
-      std::cout << "CASE 4" << std::endl;
-
       break;
     }
     }

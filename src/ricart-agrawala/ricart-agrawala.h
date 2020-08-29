@@ -24,32 +24,44 @@ private:
 
   void *createZmqSocket(int type);
   void closeZmqSocket(void *socket);
+
   void sendMessage(Message message, int port);
   void sendReplyMessage(Message message);
+
   std::string getRequestIdWithMemoryAddress(std::string memoryAddress);
   bool checkIfReceivedAllReplies(std::string memoryAddress);
+
   Message removeFirstElementFromRequestQueue();
   void removeMessageFromQueue(Message message);
+
   void sortRequestQueue();
 
 public:
   RicartAgrawala(int port);
   ~RicartAgrawala();
+
   void sendReplyMessages();
   Message sendRequestMessage(std::string address);
   void sendRemoveMessage(Message message);
-  void addToRequestQueue(Message message);
+
   void receiveRequestMessage(Message message);
   void receiveReplyMessage(Message message);
   void receiveRemoveMessage(Message message);
+
   Message removeMessageWithMessageAddress(std::string memoryAddress);
+
   bool canEnterCriticalSection(std::string memoryAddress);
   void exitCriticalSection(std::string memoryAddress);
+
+  void removeFromReplyReceived(std::string requestId);
+  void addToRequestQueue(Message message);
+  int requestQueueSize();
+
   void addNewPortNumber(int port);
   void removePortNumber(int port);
   void displayPortNumbers();
+
   void displayMessages();
-  int requestQueueSize();
   int getPort();
 };
 #endif

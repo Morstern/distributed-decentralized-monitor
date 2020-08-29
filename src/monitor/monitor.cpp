@@ -76,7 +76,7 @@ void Monitor::tryEnter(std::string memoryAddress, int ms) {
     std::cout << "Monitor with port: [" << ricartAgrawala.getPort()
               << "] has entered the: [" << memoryAddress << "]" << std::endl;
   } else {
-    ricartAgrawala.sendRemoveMessage(message);
+    ricartAgrawala.removeFromReplyReceived(message.getRequestId());
     std::cout << "Monitor with port: [" << ricartAgrawala.getPort()
               << "] could not enter the: [" << memoryAddress
               << "] he waited for: " << ms << "ms" << std::endl;
@@ -95,12 +95,6 @@ void Monitor::wait(std::string memoryAddress) {
 
   std::cout << "Monitor with port: [" << ricartAgrawala.getPort()
             << "] has entered the: [" << memoryAddress << "]" << std::endl;
-}
-
-void Monitor::pulseAll(std::string memoryAddress) {
-  Message message =
-      ricartAgrawala.removeMessageWithMessageAddress(memoryAddress);
-  ricartAgrawala.sendRemoveMessage(message);
 }
 
 void Monitor::exit(std::string memoryAddress) {
