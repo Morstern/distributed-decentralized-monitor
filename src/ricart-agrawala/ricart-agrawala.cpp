@@ -35,26 +35,6 @@ RicartAgrawala::getRequestIdWithMemoryAddress(std::string memoryAddress) {
   return "";
 }
 
-bool RicartAgrawala::checkIfReceivedAllReplies(std::string memoryAddress) {
-  return replyReceived[getRequestIdWithMemoryAddress(memoryAddress)].size() ==
-         portNumbers.size();
-}
-
-Message RicartAgrawala::removeFirstElementFromRequestQueue() {
-  Message message = requestQueue.at(0).second;
-  requestQueue.erase(requestQueue.begin());
-  return message;
-}
-
-void RicartAgrawala::removeMessageFromQueue(Message message) {
-  for (int i = 0; i < requestQueue.size(); i++) {
-    if (message.getRequestId() == requestQueue.at(i).second.getRequestId()) {
-      requestQueue.erase(requestQueue.begin() + i);
-      break;
-    }
-  }
-}
-
 void RicartAgrawala::sortRequestQueue() {
   std::sort(requestQueue.begin(), requestQueue.end(),
             [](const std::pair<long, Message> &x, std::pair<long, Message> &y) {
@@ -87,6 +67,15 @@ void RicartAgrawala::sendReplyMessages() {
   }
 }
 
+void RicartAgrawala::removeMessageFromQueue(Message message) {
+  for (int i = 0; i < requestQueue.size(); i++) {
+    if (message.getRequestId() == requestQueue.at(i).second.getRequestId()) {
+      requestQueue.erase(requestQueue.begin() + i);
+      break;
+    }
+  }
+}
+
 Message RicartAgrawala::sendRequestMessage(std::string address) {
   long timestamp = Utils::getCurrentTimestamp();
   std::string s_requestId = Utils::createRequestId(port, requestId);
@@ -107,8 +96,7 @@ void RicartAgrawala::sendRemoveMessage(Message message) {
 }
 
 void RicartAgrawala::receiveRequestMessage(Message message) {
-  // Utils::outputMessageInformation(message,
-  // message.getPort(),HelperMessageReceiverOrSender::RECEIVER);
+  // Utils::outputMessageInformation(message, message.getPort(), HelperMessageReceiverOrSender::RECEIVER);
   if (requestQueue.size() == 0) {
     sendReplyMessage(message);
   } else {
@@ -116,9 +104,15 @@ void RicartAgrawala::receiveRequestMessage(Message message) {
   }
 }
 
+void RicartAgrawala::addToRequestQueue(Message message) {
+  requestQueue.push_back(
+      std::pair<long, Message>{message.getTimestamp(), message});
+  sortRequestQueue();
+  sendReplyMessages();
+}
+
 void RicartAgrawala::receiveReplyMessage(Message message) {
-  // Utils::outputMessageInformation(message,
-  // port,HelperMessageReceiverOrSender::RECEIVER);
+  // Utils::outputMessageInformation(message, port, HelperMessageReceiverOrSender::RECEIVER);
   std::vector<int> replies;
   if (replyReceived.count(message.getRequestId())) {
     replies = replyReceived[message.getRequestId()];
@@ -131,8 +125,7 @@ void RicartAgrawala::receiveReplyMessage(Message message) {
 }
 
 void RicartAgrawala::receiveRemoveMessage(Message message) {
-  // Utils::outputMessageInformation(message,
-  // port,HelperMessageReceiverOrSender::RECEIVER);
+  // Utils::outputMessageInformation(message, port, HelperMessageReceiverOrSender::RECEIVER);
   removeMessageFromQueue(message);
   sendReplyMessages();
 }
@@ -163,6 +156,11 @@ bool RicartAgrawala::canEnterCriticalSection(std::string memoryAddress) {
   return false;
 }
 
+bool RicartAgrawala::checkIfReceivedAllReplies(std::string memoryAddress) {
+  return replyReceived[getRequestIdWithMemoryAddress(memoryAddress)].size() ==
+         portNumbers.size();
+}
+
 void RicartAgrawala::exitCriticalSection(std::string memoryAddress) {
   Message message = removeFirstElementFromRequestQueue();
   removeFromReplyReceived(message.getRequestId());
@@ -173,11 +171,10 @@ void RicartAgrawala::removeFromReplyReceived(std::string requestId) {
   replyReceived.erase(requestId);
 }
 
-void RicartAgrawala::addToRequestQueue(Message message) {
-  requestQueue.push_back(
-      std::pair<long, Message>{message.getTimestamp(), message});
-  sortRequestQueue();
-  sendReplyMessages();
+Message RicartAgrawala::removeFirstElementFromRequestQueue() {
+  Message message = requestQueue.at(0).second;
+  requestQueue.erase(requestQueue.begin());
+  return message;
 }
 
 int RicartAgrawala::requestQueueSize() { return requestQueue.size(); }

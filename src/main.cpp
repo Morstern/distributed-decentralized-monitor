@@ -6,8 +6,9 @@
 // HOW TO RUN:
 // ./a.out test -> run tests
 // ./a.out monitor MODE{1,2,3} OWN_PORT OTHER_PORT_1 OTHER_PORT_2 OTHER_PORT_3...
-// for example: 4 console windows: [console_1] ./a.out monitor 1
-// 10000 10001 10002 10003 [console_2] ./a.out monitor 2 10001 10000 10002 10003
+// for example: 4 console windows:
+// [console_1] ./a.out monitor 1 10000 10001 10002 10003
+// [console_2] ./a.out monitor 2 10001 10000 10002 10003
 // [console_3] ./a.out monitor 3 10002 10000 10001 10003
 // [console_4] ./a.out monitor 1 10003 10001 10002 10000
 
