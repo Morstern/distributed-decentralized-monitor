@@ -4,6 +4,7 @@ University project written in C++  [C++, ØMQ].
 ## Compiling & launching
 
 __The easy way:__ To compile you need an environment where you can use the make command. (for example Linux)
+
 __The hard way:__ You can compile all of those files in one line in your console, but it is tiresome (especially during the development phase)
 
 ### __Make sure you have installed the ZMQ library and you link them when you compile the code (I used the one for C language)__
