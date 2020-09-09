@@ -24,20 +24,18 @@ Create a solution to communicate between processes with shared objects (Since it
 
 Solution has to implement:
   - communication between processes – by using ZMQ library,
-  - mutual exclusion algorithm (I decided to implement Ricart-Agrawala algorithm),
+  - mutual exclusion algorithm (I decided to implement Ricart-Agrawala algorithm).
 
 ## What this program do
 - It communicates with processes on localhost, by using ZMQ library,
 - It sends REQUEST/REPLY messages accordingly to Ricart-Agrawala algorithm,
-- It sends REMOVE message (when using Monitor::tryEnter function, although it isn't necessary).
+- It sends REMOVE message (when using Monitor::tryEnter function, although it isn't necessary),
+- It does check if some process has crashed (UPDATED: previously unimplemented),
 
 ## What this program doesn't do
-
-- It doesn't check if some process has crashed (That would be an easy thing to implement check chapter: Possible future developments/improvements),
-- It doesn't really do anything (except communicating and allowing ONE process at the same time to "enter" the object).
+- It doesn't really do anything (except communicating and managing mutual exclusion between processes).
 
 ## Possible future developments/improvements
  - receivedQueue could hold std::string (memoryAddress) instead of long(timestamp) – it could perform better when it comes about sending replies (since now after exiting from critical section, I check for every message in the receivedQueue),
- - PING/PONG messages – For example: create another process ("service registry") – which would send PING messages with every other process, processes which wouldn't send PONG in certain time, would be treated as crashed (message would be sent to all other processes which would delete all requestMessages etc.),
  - real shared objects – another MessageType for example MessageType::CREATE, all processes would create an object with the ID given in "memoryAddress" field. There should be also another MessageType for updating fields, such as MessageType::UPDATE (and every process would re-send the message with MessageType::RECEIVED) – process which currently holds the lock, wouldn't notify other processes until he gets all replies. 
  
