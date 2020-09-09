@@ -3,7 +3,7 @@
 #include <iostream>
 
 // TODO: REMOVE -> send REMOVE message when wait timer expires
-enum class MessageType { REQUEST, REPLY, REMOVE };
+enum class MessageType { REQUEST, REPLY, REMOVE, PING };
 
 std::string messagetype_to_string(const MessageType &messageType);
 MessageType string_to_messagetype(const std::string &s_messageType);

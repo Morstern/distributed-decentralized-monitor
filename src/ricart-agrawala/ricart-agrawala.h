@@ -5,8 +5,10 @@
 #include "../message/message.h"
 #include "../utils/utils.h"
 #include <algorithm>
+#include <cstring>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <set>
 #include <string>
 #include <vector>
@@ -17,15 +19,21 @@ private:
   std::vector<int> portNumbers;
   std::vector<std::pair<long, Message>> requestQueue;
   std::map<std::string, std::vector<int>> replyReceived;
+  std::mutex mtx;
 
   void *context;
   int port;
   int requestId;
+  const int TIMEOUT = 1000;
 
   void *createZmqSocket(int type);
   void closeZmqSocket(void *socket);
 
   void sendMessage(Message message, int port);
+  void removeAllRepliesReceivedFromPort(int _port);
+  void removeAllRequestsSentFromPort(int _port);
+  void removePortFromPortNumbers(int _port);
+  void checkForDeadNodes();
   void sendReplyMessage(Message message);
 
   std::string getRequestIdWithMemoryAddress(std::string memoryAddress);

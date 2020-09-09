@@ -2,7 +2,6 @@
 
 void Monitor::handleReceivingMessages() {
   int len;
-  std::cout << "Handler function is initialized" << std::endl;
   char *buffer = new char[BUFFER_SIZE];
   while (true) {
     memset(buffer, 0, BUFFER_SIZE);
@@ -11,7 +10,6 @@ void Monitor::handleReceivingMessages() {
       std::string serializedMessage =
           std::string(reinterpret_cast<char const *>(buffer),
                       std::char_traits<char>::length(buffer));
-
       Message message{serializedMessage};
       switch (message.getMessageType()) {
       case MessageType::REMOVE: {
@@ -25,6 +23,9 @@ void Monitor::handleReceivingMessages() {
       case MessageType::REQUEST: {
         ricartAgrawala.receiveRequestMessage(message);
         break;
+      }
+      case MessageType::PING: {
+        //
       }
       }
     }
@@ -68,8 +69,8 @@ void Monitor::tryEnter(std::string memoryAddress, int ms) {
   int totalTimeSpentForWaiting = 0;
   while (!ricartAgrawala.canEnterCriticalSection(memoryAddress) ||
          totalTimeSpentForWaiting < ms) {
-    totalTimeSpentForWaiting += 50;
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    totalTimeSpentForWaiting += 250;
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
   }
 
   if (ricartAgrawala.canEnterCriticalSection(memoryAddress)) {
@@ -90,7 +91,7 @@ void Monitor::wait(std::string memoryAddress) {
   ricartAgrawala.sendRequestMessage(memoryAddress);
 
   while (!ricartAgrawala.canEnterCriticalSection(memoryAddress)) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
   }
 
   std::cout << "Monitor with port: [" << ricartAgrawala.getPort()

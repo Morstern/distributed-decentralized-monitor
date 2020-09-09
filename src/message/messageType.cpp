@@ -11,6 +11,9 @@ std::string messagetype_to_string(const MessageType &messageType) {
   case MessageType::REMOVE: {
     return "REMOVE";
   }
+  case MessageType::PING: {
+    return "PING";
+  }
   default: {
     return "REPLY";
   }
@@ -22,6 +25,8 @@ MessageType string_to_messagetype(const std::string &s_messageType) {
     return MessageType::REPLY;
   } else if (s_messageType == "REQUEST") {
     return MessageType::REQUEST;
+  } else if (s_messageType == "PING") {
+    return MessageType::PING;
   } else {
     return MessageType::REMOVE;
   }
